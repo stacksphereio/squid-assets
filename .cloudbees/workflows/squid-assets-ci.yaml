@@ -1,0 +1,102 @@
+# StackSphere squid-assets CI Pipeline
+# ARCH VERSION: 0.5
+# Purpose: Automated CI/CD with dev/integ deployment
+
+apiVersion: automation.cloudbees.io/v1alpha1
+kind: workflow
+name: squid-assets CI
+
+permissions:
+  scm-token-own: read
+  scm-token-org: read
+  id-token: write
+
+on:
+  push:
+    branches:
+      - "**"
+  workflow_dispatch:
+    inputs:
+      enable_smart_tests:
+        description: "Enable CloudBees Smart Tests integration"
+        required: false
+        type: string
+        default: "false"
+
+jobs:
+  test:
+    uses: github.com/stacksphereio/core-workflows/.cloudbees/workflows/component-test.yaml@main
+    with:
+      component_name: squid-assets
+      language: go
+      enable_smart_tests: "true"
+    secrets: inherit
+    vars: inherit
+
+  build:
+    needs: test
+    uses: github.com/stacksphereio/core-workflows/.cloudbees/workflows/component-build.yaml@main
+    with:
+      component_name: squid-assets
+      docker_user: ${{ vars.DOCKER_USER }}
+      commit_sha: ${{ cloudbees.scm.sha }}
+      push_latest: "true"
+    secrets: inherit
+    vars: inherit
+
+  deploy-dev:
+    if: ${{ cloudbees.scm.branch != 'main' }}
+    needs: build
+    environment: dev
+    uses: github.com/stacksphereio/core-workflows/.cloudbees/workflows/component-deploy.yaml@main
+    with:
+      component_name: squid-assets
+      version: ${{ needs.build.outputs.VERSION }}
+      environment: dev
+      stack_name: squid
+      docker_repo: ${{ vars.DOCKER_USER }}/squid-assets
+      artifact_id: ${{ needs.build.outputs.PRIMARY_ARTIFACT_ID }}
+      commit_sha: ${{ cloudbees.scm.sha }}
+      database_mode: "no-database"
+      enable_liquibase: "false"
+      feature_flags_enabled: true
+      feature_flags_secret_name: squid-assets-fmkey
+      feature_flags_secret_key: FM_KEY
+      feature_flags_create_secret: true
+    secrets: inherit
+    vars: inherit
+
+  deploy-integ:
+    if: ${{ cloudbees.scm.branch == 'main' }}
+    needs: build
+    environment: integ
+    uses: github.com/stacksphereio/core-workflows/.cloudbees/workflows/component-deploy.yaml@main
+    with:
+      component_name: squid-assets
+      version: ${{ needs.build.outputs.VERSION }}
+      environment: integ
+      stack_name: squid
+      docker_repo: ${{ vars.DOCKER_USER }}/squid-assets
+      artifact_id: ${{ needs.build.outputs.PRIMARY_ARTIFACT_ID }}
+      commit_sha: ${{ cloudbees.scm.sha }}
+      database_mode: "no-database"
+      enable_liquibase: "false"
+      feature_flags_enabled: true
+      feature_flags_secret_name: squid-assets-fmkey
+      feature_flags_secret_key: FM_KEY
+      feature_flags_create_secret: true
+    secrets: inherit
+    vars: inherit
+
+  trigger-release:
+    if: false  # Disabled - stack release not yet implemented
+    needs: [build, deploy-integ]
+    uses: github.com/stacksphereio/core-workflows/.cloudbees/workflows/application-release.yaml@main
+    with:
+      stack_name: squid
+      triggering_component: squid-assets
+      version: ${{ needs.build.outputs.VERSION }}
+      target_environment: integ
+      baseline_environment: prod
+    secrets: inherit
+    vars: inherit
