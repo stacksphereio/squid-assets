@@ -1,4 +1,4 @@
-module codlocker-assets
+module squid-assets
 
 go 1.24.0
 

@@ -4,7 +4,7 @@ def Params
 pipeline {
     agent {
         kubernetes {
-            label 'codlocker-assets'
+            label 'squid-assets'
             defaultContainer 'jnlp'
             yamlFile 'KubernetesPod.yaml'
         }
@@ -16,7 +16,7 @@ pipeline {
         REVISION = sh(script: 'git rev-parse', returnStdout: true).trim()
         DOCKER_DEST = "gururepservice"
         BMAJOR = "1"
-        MICRO_SERVICE_NAME = "codlocker-assets"
+        MICRO_SERVICE_NAME = "squid-assets"
     }
 
     stages {
@@ -60,13 +60,13 @@ pipeline {
             script {
               def digestPath = "${env.WORKSPACE}/.kaniko.digest"
               def digest = fileExists(digestPath) ? readFile(digestPath).trim() : ""
-              def tag = "${DOCKER_DEST}/codlocker-assets:${BMAJOR}.${BUILD_ID}"
+              def tag = "${DOCKER_DEST}/squid-assets:${BMAJOR}.${BUILD_ID}"
         
               def payload = """
               {
-                "component_id": "codlocker-assets",
+                "component_id": "squid-assets",
                 "artifact_type": "container-image",
-                "artifact_name": "gururepservice/codlocker-assets",
+                "artifact_name": "gururepservice/squid-assets",
                 "reference": "${tag}",
                 "version": "${BMAJOR}.${BUILD_ID}",
                 "digest": "${digest}",
