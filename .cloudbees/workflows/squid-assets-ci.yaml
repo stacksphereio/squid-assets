@@ -1,6 +1,7 @@
 # StackSphere squid-assets CI Pipeline
 # ARCH VERSION: 0.5
 # Purpose: Automated CI/CD with dev/integ deployment
+# Production upload test
 
 apiVersion: automation.cloudbees.io/v1alpha1
 kind: workflow
