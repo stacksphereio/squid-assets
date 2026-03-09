@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"log"
 	"mime"
@@ -21,12 +22,18 @@ import (
 )
 
 func main() {
-	// 1) DB init
-	sqlDB, err := db.Init()
-	if err != nil {
-		log.Fatalf("database init failed: %v", err)
+	// 1) DB init (optional - only if AUTH_DB_URL is set)
+	var sqlDB *sql.DB
+	if os.Getenv("AUTH_DB_URL") != "" {
+		var err error
+		sqlDB, err = db.Init()
+		if err != nil {
+			log.Fatalf("database init failed: %v", err)
+		}
+		defer sqlDB.Close()
+	} else {
+		log.Printf("AUTH_DB_URL not set; database disabled")
 	}
-	defer sqlDB.Close()
 
 	// 2) Feature flags init (non-fatal)
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
@@ -88,9 +95,12 @@ func main() {
 	}).Methods(http.MethodGet)
 
 	r.HandleFunc("/ready", func(w http.ResponseWriter, _ *http.Request) {
-		if err := sqlDB.Ping(); err != nil {
-			http.Error(w, "db not ready", http.StatusServiceUnavailable)
-			return
+		// Only check DB if one was initialized
+		if sqlDB != nil {
+			if err := sqlDB.Ping(); err != nil {
+				http.Error(w, "db not ready", http.StatusServiceUnavailable)
+				return
+			}
 		}
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ready"))
