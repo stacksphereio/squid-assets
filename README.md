@@ -115,8 +115,8 @@ All images are lightweight SVG placeholders perfect for development and demo pur
 `squid-assets` integrates with other SquidStack components:
 
 - **squid-ui**: Frontend fetches product images and UI assets
-- **clam-catalog**: Product catalog may reference image URLs served by squid-assets
-- **barnacle-reviews**: User-uploaded review images could be stored here
+- **squid-catalog**: Product catalog may reference image URLs served by squid-assets
+- **barnacle-reviews**: User-uploaded review images could be stored here (future service)
 
 ---
 
